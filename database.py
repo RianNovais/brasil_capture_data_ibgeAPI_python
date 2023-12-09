@@ -9,9 +9,12 @@ class Database():
         self.cursor = self.conn.cursor()
 
         self.regionsUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/regioes"
+        self.statesUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/estados"
+
 
         self.create_tables()
         self.add_regions_to_db()
+        self.add_states_to_db()
 
     #DDL: Creating tables of database
     def create_tables(self):
@@ -73,6 +76,30 @@ class Database():
             print('REGIONS ADDED SUCESSFULLY TO DATABASE')
             return
         print('ERROR: REGIONS TABLE IS NOT EMPTY')
+
+    def add_states_to_db(self):
+        self.cursor.execute('SELECT * FROM STATES')
+        if len(self.cursor.fetchall()) == 0:
+            try:
+                responseStates = requests.get(self.statesUrl).json()
+            except:
+                print(f'ERROR IN GET -> {self.statesUrl}')
+                return
+            for state in responseStates:
+                _id = state['id']
+                acronym = state['sigla']
+                name = state['nome']
+                idRegion = state['regiao']['id']
+
+                stateData = [_id, acronym, name, idRegion]
+                self.cursor.execute('INSERT INTO states (id, acronym, name, idRegion) VALUES '
+                                    '(?, ?, ?, ?)', stateData)
+
+                self.conn.commit()
+            print('States added sucessfully to database')
+        else:
+            print('ERROR: STATES TABLE IS NOT EMPTY')
+            return
 
 
 if __name__ == "__main__":
