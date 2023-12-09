@@ -1,8 +1,12 @@
 import sqlite3
+import time
 from pathlib import Path
+from datetime import datetime
+from time import sleep
 import requests
 
-class Database():
+#Main class that contains the script's operating methods
+class Script():
     def __init__(self):
         self.path = Path().absolute() / 'db.sqlite3'
         self.conn = sqlite3.Connection(self.path)
@@ -13,17 +17,24 @@ class Database():
         self.citiesUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
         self.districtsUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/distritos"
 
-
+    # Method that starts, showing a start message, and the function calls in order
+    def run_script(self):
+        currentTime = datetime.strftime(datetime.now(), '%d/%m/%Y - %H:%M')
+        print('-' * 20 + currentTime + '-' * 20)
+        print('START')
+        time.sleep(3)
 
         self.create_tables()
-
         self.add_regions_to_db()
         self.add_states_to_db()
         self.add_cities_to_db()
         self.add_districts_to_db()
+        self.finish()
 
-    #DDL: Creating tables of database
+    #DDL: Creating tables
     def create_tables(self):
+        print('CREATING TABLES IN DATABASE')
+        time.sleep(2)
         self.cursor.execute("CREATE TABLE IF NOT EXISTS regions("
                             "id INTEGER NOT NULL,"
                             "acronym TEXT(2) NOT NULL,"
@@ -56,9 +67,12 @@ class Database():
                             "CONSTRAINT districts_PK PRIMARY KEY (id),"
                             "CONSTRAINT districts_FK FOREIGN KEY (cityId) REFERENCES cities(id)"
                             "ON DELETE CASCADE ON UPDATE CASCADE)")
+        print('TABLES CREATED SUCESSFULLY')
+        print('')
 
         self.conn.commit()
 
+    #DML: Insert Data in tables
     def add_regions_to_db(self):
         #verificando se ja existem dados na tabela, pra nao dar erro
         self.cursor.execute('SELECT * FROM regions')
@@ -80,7 +94,7 @@ class Database():
                                 '(?, ?, ?)', regionData)
 
                 self.conn.commit()
-            print('REGIONS ADDED SUCESSFULLY TO DATABASE')
+            print('Regions added sucessfully to database')
             return
         print('ERROR: REGIONS TABLE IS NOT EMPTY')
 
@@ -128,9 +142,9 @@ class Database():
 
                 self.conn.commit()
 
-            print('CITIES ADDED SUCESSFULLY')
+            print('Cities added sucessfully to database')
         else:
-            print('CITIES TABLE IS NOT EMPTY')
+            print('ERROR: CITIES TABLE IS NOT EMPTY')
             return
 
     def add_districts_to_db(self):
@@ -147,7 +161,6 @@ class Database():
                 name = district['nome']
                 cityId = district['municipio']['id']
                 cityName = district['municipio']['nome']
-                print(_id, name, cityId, cityName)
 
                 districtData = (_id, name, cityId, cityName)
 
@@ -155,8 +168,14 @@ class Database():
                                     'VALUES (?, ?, ?, ?)', districtData)
 
                 self.conn.commit()
-            print('DISTRICTS ADDED SUCESSFULLY')
+            print('Districts added sucessfully to database')
         else:
-            print('DISTRICT TABLE IS NOT EMPTY')
-if __name__ == "__main__":
-    db = Database()
+            print('ERROR: DISTRICT TABLE IS NOT EMPTY')
+
+    #Finishing the script, showing sucessfull message
+    def finish(self):
+        print('')
+        print('END')
+        print(f'database file .sqlite3 saved in {self.path}')
+        self.cursor.close()
+        self.conn.close()

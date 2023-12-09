@@ -1,5 +1,6 @@
-from database import Database
+from script import Script
 
-
+#Execute here:
 if __name__ == "__main__":
-    db = Database()
+    sc = Script()
+    sc.run_script()
