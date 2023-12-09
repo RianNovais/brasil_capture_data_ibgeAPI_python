@@ -11,14 +11,16 @@ class Database():
         self.regionsUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/regioes"
         self.statesUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/estados"
         self.citiesUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
+        self.districtsUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/distritos"
 
 
 
         self.create_tables()
+
         self.add_regions_to_db()
         self.add_states_to_db()
         self.add_cities_to_db()
-
+        self.add_districts_to_db()
 
     #DDL: Creating tables of database
     def create_tables(self):
@@ -27,6 +29,7 @@ class Database():
                             "acronym TEXT(2) NOT NULL,"
                             "name TEXT NOT NULL,"
                             "CONSTRAINT regions_PK PRIMARY KEY (id))")
+
 
         self.cursor.execute("CREATE TABLE IF NOT EXISTS states("
                             "id INTEGER NOT NULL,"
@@ -130,7 +133,30 @@ class Database():
             print('CITIES TABLE IS NOT EMPTY')
             return
 
-    # def add_districts_to_db(self):
+    def add_districts_to_db(self):
+        self.cursor.execute('SELECT * FROM districts')
+        if len(self.cursor.fetchall()) == 0:
+            try:
+                response = requests.get(self.districtsUrl).json()
+            except:
+                print(f'ERROR IN GET -> {self.districtsUrl}')
+                return
 
+            for district in response:
+                _id = district['id']
+                name = district['nome']
+                cityId = district['municipio']['id']
+                cityName = district['municipio']['nome']
+                print(_id, name, cityId, cityName)
+
+                districtData = (_id, name, cityId, cityName)
+
+                self.cursor.execute('INSERT INTO districts (id, name, cityId, cityName) '
+                                    'VALUES (?, ?, ?, ?)', districtData)
+
+                self.conn.commit()
+            print('DISTRICTS ADDED SUCESSFULLY')
+        else:
+            print('DISTRICT TABLE IS NOT EMPTY')
 if __name__ == "__main__":
     db = Database()
