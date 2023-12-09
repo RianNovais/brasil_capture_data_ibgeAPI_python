@@ -10,11 +10,15 @@ class Database():
 
         self.regionsUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/regioes"
         self.statesUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/estados"
+        self.citiesUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
+
 
 
         self.create_tables()
         self.add_regions_to_db()
         self.add_states_to_db()
+        self.add_cities_to_db()
+
 
     #DDL: Creating tables of database
     def create_tables(self):
@@ -68,9 +72,9 @@ class Database():
                 acronym = region['sigla']
                 name = region['nome']
 
-                data = [_id, acronym, name]
+                regionData = (_id, acronym, name)
                 self.cursor.execute('INSERT INTO regions (id, acronym, name) VALUES'
-                                '(?, ?, ?)', data)
+                                '(?, ?, ?)', regionData)
 
                 self.conn.commit()
             print('REGIONS ADDED SUCESSFULLY TO DATABASE')
@@ -91,7 +95,7 @@ class Database():
                 name = state['nome']
                 idRegion = state['regiao']['id']
 
-                stateData = [_id, acronym, name, idRegion]
+                stateData = (_id, acronym, name, idRegion)
                 self.cursor.execute('INSERT INTO states (id, acronym, name, idRegion) VALUES '
                                     '(?, ?, ?, ?)', stateData)
 
@@ -101,6 +105,32 @@ class Database():
             print('ERROR: STATES TABLE IS NOT EMPTY')
             return
 
+    def add_cities_to_db(self):
+        self.cursor.execute('SELECT * FROM cities')
+        if len(self.cursor.fetchall()) == 0:
+            try:
+                responseCities = requests.get(self.citiesUrl).json()
+            except:
+                print(f'ERROR IN GET -> {self.citiesUrl}')
+                return
+            for city in responseCities:
+                _id = city['id']
+                name = city['nome']
+                stateId = city['microrregiao']['mesorregiao']['UF']['id']
+                # stateNome = city['microrregiao']['mesorregiao']['UF']['nome']
+
+                cityData = (_id, name,stateId)
+                self.cursor.execute('INSERT INTO cities (id, name, stateId) '
+                                    'VALUES (?, ?, ?)', cityData)
+
+                self.conn.commit()
+
+            print('CITIES ADDED SUCESSFULLY')
+        else:
+            print('CITIES TABLE IS NOT EMPTY')
+            return
+
+    # def add_districts_to_db(self):
 
 if __name__ == "__main__":
     db = Database()
