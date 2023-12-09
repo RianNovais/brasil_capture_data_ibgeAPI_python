@@ -16,6 +16,8 @@ class Script():
         self.statesUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/estados"
         self.citiesUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
         self.districtsUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/distritos"
+        self.mesoregionsUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/mesorregioes"
+        self.microregionsUrl = "https://servicodados.ibge.gov.br/api/v1/localidades/microrregioes"
 
     # Method that starts, showing a start message, and the function calls in order
     def run_script(self):
@@ -25,10 +27,14 @@ class Script():
         time.sleep(3)
 
         self.create_tables()
+
         self.add_regions_to_db()
         self.add_states_to_db()
+        self.add_mesoregions_to_db()
+        self.add_microregions_to_db()
         self.add_cities_to_db()
         self.add_districts_to_db()
+
         self.finish()
 
     #DDL: Creating tables
@@ -55,6 +61,7 @@ class Script():
                             "id INTEGER NOT NULL,"
                             "name TEXT NOT NULL,"
                             "stateId INTEGER NOT NULL, "
+                            "microregionId INTEGER NOT NULL, "
                             "CONSTRAINT cities_PK PRIMARY KEY (id),"
                             "CONSTRAINT cities_FK FOREIGN KEY (stateId) REFERENCES states(id)"
                             "ON DELETE CASCADE ON UPDATE CASCADE)")
@@ -66,6 +73,24 @@ class Script():
                             "cityName TEXT NOT NULL,"
                             "CONSTRAINT districts_PK PRIMARY KEY (id),"
                             "CONSTRAINT districts_FK FOREIGN KEY (cityId) REFERENCES cities(id)"
+                            "ON DELETE CASCADE ON UPDATE CASCADE)")
+
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS mesoregions("
+                            "id INTEGER NOT NULL,"
+                            "name TEXT NOT NULL,"
+                            "stateId INTEGER NOT NULL,"
+                            "stateName TEXT NOT NULL,"
+                            "CONSTRAINT mesoregions_PK PRIMARY KEY (id),"
+                            "CONSTRAINT districts_FK FOREIGN KEY (stateId) REFERENCES states(id)"
+                            "ON DELETE CASCADE ON UPDATE CASCADE)")
+
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS microregions("
+                            "id INTEGER NOT NULL,"
+                            "name TEXT NOT NULL,"
+                            "mesoregionId INTEGER NOT NULL,"
+                            "mesoregionName TEXT NOT NULL,"
+                            "CONSTRAINT microregions_PK PRIMARY KEY (id),"
+                            "CONSTRAINT microregions_FK FOREIGN KEY (mesoregionId) REFERENCES mesoregions(id)"
                             "ON DELETE CASCADE ON UPDATE CASCADE)")
         print('TABLES CREATED SUCESSFULLY')
         print('')
@@ -134,11 +159,12 @@ class Script():
                 _id = city['id']
                 name = city['nome']
                 stateId = city['microrregiao']['mesorregiao']['UF']['id']
+                microregionId = city['microrregiao']['id']
                 # stateNome = city['microrregiao']['mesorregiao']['UF']['nome']
 
-                cityData = (_id, name,stateId)
-                self.cursor.execute('INSERT INTO cities (id, name, stateId) '
-                                    'VALUES (?, ?, ?)', cityData)
+                cityData = (_id, name,stateId, microregionId)
+                self.cursor.execute('INSERT INTO cities (id, name, stateId, microregionId) '
+                                    'VALUES (?, ?, ?, ?)', cityData)
 
                 self.conn.commit()
 
@@ -172,6 +198,57 @@ class Script():
         else:
             print('ERROR: DISTRICT TABLE IS NOT EMPTY')
 
+    def add_mesoregions_to_db(self):
+        self.cursor.execute('SELECT * from mesoregions')
+        if len(self.cursor.fetchall()) == 0:
+            try:
+                response = requests.get(self.mesoregionsUrl).json()
+            except:
+                print(f'ERROR IN GET -> {self.mesoregionsUrl}')
+                return
+            for mesoregion in response:
+
+                _id = mesoregion['id']
+                name = mesoregion['nome']
+                stateId = mesoregion['UF']['id']
+                stateName = mesoregion['UF']['nome']
+
+                mesoregionData = (_id, name, stateId, stateName)
+                self.cursor.execute('INSERT INTO mesoregions (id, name, stateId, stateName)'
+                                    'VALUES (?, ?, ?, ?)', mesoregionData)
+
+                self.conn.commit()
+            print('Mesoregions added sucessfully to database')
+        else:
+            print('ERROR: MESOREGIONS TABLE IS NOT EMPTY')
+            return
+
+
+    def add_microregions_to_db(self):
+        self.cursor.execute('SELECT * FROM microregions')
+        if len(self.cursor.fetchall()) == 0:
+            try:
+                response = requests.get(self.microregionsUrl).json()
+            except:
+                print(f'ERROR IN GET -> {self.microregionsUrl}')
+            for microregion in response:
+                _id = microregion['id']
+                name = microregion['nome']
+                mesoregionId = microregion['mesorregiao']['id']
+                mesoregionName = microregion['mesorregiao']['nome']
+
+                microregionData = (_id, name, mesoregionId, mesoregionName)
+
+                self.cursor.execute('INSERT INTO microregions (id, name, mesoregionId, mesoregionName)'
+                                    'VALUES (?, ?, ?, ?)', microregionData)
+
+                self.conn.commit()
+            print('Added microrregions sucessfully')
+        else:
+            print('ERROR: MESOREGIONS IS NOT EMPTY')
+            return
+
+
     #Finishing the script, showing sucessfull message
     def finish(self):
         print('')
@@ -179,3 +256,4 @@ class Script():
         print(f'database file .sqlite3 saved in {self.path}')
         self.cursor.close()
         self.conn.close()
+
