@@ -60,10 +60,18 @@ class Script():
         self.cursor.execute("CREATE TABLE IF NOT EXISTS cities("
                             "id INTEGER NOT NULL,"
                             "name TEXT NOT NULL,"
-                            "stateId INTEGER NOT NULL, "
-                            "microregionId INTEGER NOT NULL, "
+                            "stateId INTEGER NOT NULL,"
+                            "stateName TEXT NOT NULL,"
+                            "mesoregionId INTEGER NOT NULL,"
+                            "mesoregionName TEXT NOT NULL, "
+                            "microregionId INTEGER NOT NULL,"
+                            "microregionName TEXT NOT NULL, "
                             "CONSTRAINT cities_PK PRIMARY KEY (id),"
-                            "CONSTRAINT cities_FK FOREIGN KEY (stateId) REFERENCES states(id)"
+                            "CONSTRAINT cities_FK_STATE FOREIGN KEY (stateId) REFERENCES states(id)"
+                            "ON DELETE CASCADE ON UPDATE CASCADE,"
+                            "CONSTRAINT cities_FK_MESOREGION FOREIGN KEY (mesoregionId) REFERENCES mesoregions(id)"
+                            "ON DELETE CASCADE ON UPDATE CASCADE,"
+                            "CONSTRAINT cities_FK_MICROREGION FOREIGN KEY (microregionId) REFERENCES microregions(id)"
                             "ON DELETE CASCADE ON UPDATE CASCADE)")
 
         self.cursor.execute("CREATE TABLE IF NOT EXISTS districts("
@@ -71,8 +79,12 @@ class Script():
                             "name TEXT NOT NULL,"
                             "cityId INTEGER NOT NULL,"
                             "cityName TEXT NOT NULL,"
+                            "stateId INTEGER NOT NULL,"
+                            "stateName TEXT NOT NULL,"
                             "CONSTRAINT districts_PK PRIMARY KEY (id),"
-                            "CONSTRAINT districts_FK FOREIGN KEY (cityId) REFERENCES cities(id)"
+                            "CONSTRAINT districts_FK_CITY FOREIGN KEY (cityId) REFERENCES cities(id)"
+                            "ON DELETE CASCADE ON UPDATE CASCADE,"
+                            "CONSTRAINT districts_FK_STATE FOREIGN KEY (stateId) REFERENCES states(id)"
                             "ON DELETE CASCADE ON UPDATE CASCADE)")
 
         self.cursor.execute("CREATE TABLE IF NOT EXISTS mesoregions("
@@ -81,7 +93,7 @@ class Script():
                             "stateId INTEGER NOT NULL,"
                             "stateName TEXT NOT NULL,"
                             "CONSTRAINT mesoregions_PK PRIMARY KEY (id),"
-                            "CONSTRAINT districts_FK FOREIGN KEY (stateId) REFERENCES states(id)"
+                            "CONSTRAINT mesoregions_FK FOREIGN KEY (stateId) REFERENCES states(id)"
                             "ON DELETE CASCADE ON UPDATE CASCADE)")
 
         self.cursor.execute("CREATE TABLE IF NOT EXISTS microregions("
@@ -89,8 +101,12 @@ class Script():
                             "name TEXT NOT NULL,"
                             "mesoregionId INTEGER NOT NULL,"
                             "mesoregionName TEXT NOT NULL,"
+                            "stateId INTEGER NOT NULL,"
+                            "stateName TEXT NOT NULL,"
                             "CONSTRAINT microregions_PK PRIMARY KEY (id),"
-                            "CONSTRAINT microregions_FK FOREIGN KEY (mesoregionId) REFERENCES mesoregions(id)"
+                            "CONSTRAINT microregions_FK_MESOREGIONS FOREIGN KEY (mesoregionId) REFERENCES mesoregions(id)"
+                            "ON DELETE CASCADE ON UPDATE CASCADE,"
+                            "CONSTRAINT microregions_FK_STATE FOREIGN KEY (stateId) REFERENCES states(id)"
                             "ON DELETE CASCADE ON UPDATE CASCADE)")
         print('TABLES CREATED SUCESSFULLY')
         print('')
@@ -159,12 +175,16 @@ class Script():
                 _id = city['id']
                 name = city['nome']
                 stateId = city['microrregiao']['mesorregiao']['UF']['id']
+                stateName = city['microrregiao']['mesorregiao']['UF']['nome']
                 microregionId = city['microrregiao']['id']
+                microregionName = city['microrregiao']['nome']
+                mesoregionId = city['microrregiao']['mesorregiao']['id']
+                mesoregionName = city['microrregiao']['mesorregiao']['nome']
                 # stateNome = city['microrregiao']['mesorregiao']['UF']['nome']
 
-                cityData = (_id, name,stateId, microregionId)
-                self.cursor.execute('INSERT INTO cities (id, name, stateId, microregionId) '
-                                    'VALUES (?, ?, ?, ?)', cityData)
+                cityData = (_id, name,stateId, stateName, microregionId, microregionName, mesoregionId, mesoregionName)
+                self.cursor.execute('INSERT INTO cities (id, name, stateId, stateName, microregionId, microregionName, mesoregionId, mesoregionName) '
+                                    'VALUES (?, ?, ?, ?, ?, ?, ?, ?)', cityData)
 
                 self.conn.commit()
 
@@ -187,11 +207,13 @@ class Script():
                 name = district['nome']
                 cityId = district['municipio']['id']
                 cityName = district['municipio']['nome']
+                stateId = district['municipio']['microrregiao']['mesorregiao']['UF']['id']
+                stateName = district['municipio']['microrregiao']['mesorregiao']['UF']['nome']
 
-                districtData = (_id, name, cityId, cityName)
+                districtData = (_id, name, cityId, cityName, stateId, stateName)
 
-                self.cursor.execute('INSERT INTO districts (id, name, cityId, cityName) '
-                                    'VALUES (?, ?, ?, ?)', districtData)
+                self.cursor.execute('INSERT INTO districts (id, name, cityId, cityName, stateId, stateName) '
+                                    'VALUES (?, ?, ?, ?, ?, ?)', districtData)
 
                 self.conn.commit()
             print('Districts added sucessfully to database')
@@ -236,11 +258,14 @@ class Script():
                 name = microregion['nome']
                 mesoregionId = microregion['mesorregiao']['id']
                 mesoregionName = microregion['mesorregiao']['nome']
+                stateId = microregion['mesorregiao']['UF']['id']
+                stateName = microregion['mesorregiao']['UF']['nome']
 
-                microregionData = (_id, name, mesoregionId, mesoregionName)
 
-                self.cursor.execute('INSERT INTO microregions (id, name, mesoregionId, mesoregionName)'
-                                    'VALUES (?, ?, ?, ?)', microregionData)
+                microregionData = (_id, name, mesoregionId, mesoregionName, stateId, stateName)
+
+                self.cursor.execute('INSERT INTO microregions (id, name, mesoregionId, mesoregionName, stateId, stateName)'
+                                    'VALUES (?, ?, ?, ?, ?, ?)', microregionData)
 
                 self.conn.commit()
             print('Added microrregions sucessfully')
