@@ -1,4 +1,3 @@
-import sys
 
 from script import Script
 

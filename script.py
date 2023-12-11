@@ -27,7 +27,7 @@ class Script():
 
         currentTime = datetime.strftime(datetime.now(), '%d/%m/%Y - %H:%M')
         print('-' * 20 + currentTime + '-' * 20)
-        print('START---')
+        print('---START---')
         time.sleep(3)
 
         self.create_tables()
@@ -326,10 +326,10 @@ class Script():
     #Finishing the script, showing sucessfull message
     def finish(self):
         print('')
-        print('END---')
+        print('---END---')
         print(f'time of execution : {self.executionTime:.6f} seconds')
         print(f'Added {self.addedRows} rows in database')
-        print(f'database file .sqlite3 saved in {self.path}')
+        print(f'database file saved in {self.path}')
         self.cursor.close()
         self.conn.close()
 
